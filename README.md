@@ -1,79 +1,184 @@
-# LLM-Chatbot-with-FastAPI-and-Streamlit
-This project empowers you to generate creative text content using the power of large language models (LLMs). It leverages the strengths of FastAPI for building a robust API server and Streamlit for crafting a user-friendly web interface.
+Certainly! Here’s a fully updated, **Gemini-powered project overview and workflow** for your LLM-Chatbot-with-FastAPI-and-Streamlit, reflecting your new code and architecture. This replaces references to OpenAI, Groq, and Ollama with your direct Gemini client functions, updated endpoints, and a Streamlit interface that calls your FastAPI Gemini endpoints.
 
-**Key Technologies:**
+# LLM-Chatbot-with-FastAPI-and-Streamlit (Google Gemini Version)
 
-* **FastAPI:** A high-performance, Python-based framework for building APIs with ease.
-* **Langchain:** A library for simplifying work with LLMs and managing complex chatbot interactions.
-* **Streamlit:** A framework that enables the creation of interactive web applications in a streamlined manner.
-* **OpenAI API (Optional):** A powerful option for accessing advanced language models from OpenAI (requires a paid API key).
-* **Groq Langchain Chat (Optional):** A convenient way to utilize Groq's cloud-based collection of open-source models for fast and efficient processing.
-* **Ollama LLM (Locally Downloaded):** A free and open-source LLM (Llama 3 in this case) that can be run locally on your machine.
-* **LangServe:** A library that simplifies deployment of LangChain runnables and chains as REST APIs.
-* **Prompt Templates:** Two templates are defined for generating essays and poems.
-* **Routes:** Routes for essay and poem generation are added to the FastAPI application.
-* **Server Execution:** The FastAPI application is run using uvicorn.
+This project enables you to generate creative text content using Google's Gemini LLM. FastAPI serves as your API backend, and Streamlit provides an interactive web UI. The architecture showcases modern Python best practices, clear modularization, and makes all text generation calls via your own FastAPI endpoints.
 
-**1. Environment Variables (.env):**
+## 🚀 Key Technologies and Structure
 
-* Create a file named `.env` in your project's root directory.
-* This file stores sensitive information like API keys that you don't want to commit to version control.
-* Include the following lines, replacing placeholders with your actual values:
+- **FastAPI:** High-performance Python web API framework.
+- **Google Gemini API (google-genai):** For direct LLM-powered content generation.
+- **Prompt Templates:** For structured essay and poem generation.
+- **Custom Python Functions:** Your own `generate_essay` and `generate_poem` logic, using your Gemini client.
+- **Streamlit:** The web interface, which interacts with the FastAPI server via HTTP requests.
+- **LangServe & Langchain (optional):** You may add these if you wish for further modular chains.
+- **dotenv:** Securely manages your API key/environment variables.
+- **Modular Folder Structure:** Keeps code for API endpoints, prompt templates, Gemini client, and Streamlit UI clearly separated.
+
+## 1. Environment Variables (`.env`)
+
+Create a `.env` file at the root of your project:
 
 ```
-OPENAI_API_KEY=your_openai_api_key  # Optional for OpenAI access
-GROQ_API_KEY=your_groq_api_key     # Optional for Groq cloud
+GEMINI_API_KEY=your_actual_gemini_api_key_here
 ```
 
-* **Important:** Never share your API keys publicly.
+> **Never share your API keys publicly! They are sensitive and should stay private.**
 
-**2. Running the Application:**
+## 2. Python Requirements
 
-There are two main components to run: the FastAPI server and the Streamlit web interface.
+Install all necessary libraries:
 
-**2.1. Running the FastAPI Server (app.py):**
+```bash
+pip install fastapi google-genai python-dotenv uvicorn streamlit requests
+```
 
-1. Make sure you have Python and the required libraries installed (`pip install fastapi langchain langchain-openai langchain-groq langchain-community uvicorn dotenv`).
-2. Load the environment variables:
+## 3. FastAPI Backend Usage
 
-   ```bash
-   source .env  # Linux/macOS
-   .env\Scripts\activate  # Windows (if using virtual environment)
-   ```
+**app/gemini_client.py:**
+```python
+from dotenv import load_dotenv
+import os
+from google import genai
 
-3. Start the server:
+load_dotenv()
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+```
 
-   ```bash
-   python app.py  # Replace port if needed
-   ```
+**app/gemini_tasks.py:**
+```python
+from google.genai import types
+from app.gemini_client import client
 
-   This will run the FastAPI server, listening on port 8000 (or your chosen port) and ready to receive requests from the Streamlit application.
+def generate_essay(topic: str, model="gemini-1.5-flash"):
+    prompt = f"Write me an essay about {topic} with 100 words"
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+            max_output_tokens=250
+        ),
+    )
+    return response.text
 
-**2.2. Running the Streamlit Web Interface (client.py):**
+def generate_poem(topic: str, model="gemini-1.5-flash"):
+    prompt = f"Write me a poem about {topic} with 100 words"
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+            max_output_tokens=250
+        ),
+    )
+    return response.text
+```
 
-1. In a separate terminal session, navigate to your project's directory.
-2. Start the Streamlit app:
+**app/routes.py:**
+```python
+from fastapi import FastAPI, Query
+from app.gemini_tasks import generate_essay, generate_poem
 
-   ```bash
-   streamlit run client.py
-   ```
+def setup_routes(app: FastAPI):
+    @app.get("/essay-direct")
+    def essay_direct(topic: str = Query(..., description="Topic to generate essay about")):
+        return {"result": generate_essay(topic)}
 
-   This will launch the Streamlit interface in your web browser, typically at `http://localhost:8080` (the default port for Streamlit).
+    @app.get("/poem-direct")
+    def poem_direct(topic: str = Query(..., description="Topic to generate poem about")):
+        return {"result": generate_poem(topic)}
+```
 
-**Basic Workflow:**
+**app/main.py:**
+```python
+from fastapi import FastAPI
+from app.routes import setup_routes
+from dotenv import load_dotenv
 
-1. **Run the FastAPI server:** Follow the steps in section 2.1 to start the server.
-2. **Run the Streamlit web interface:** Follow the steps in section 2.2 to launch the Streamlit app in your browser.
-3. **Interact with the Streamlit app:**
-   - Select between generating an essay or a poem.
-   - Enter a topic for the desired content.
-   - Click the appropriate button to trigger the request to the FastAPI server.
-   - The generated essay or poem will be displayed in the Streamlit interface.
+load_dotenv()
 
-**Additional Notes:**
+app = FastAPI(
+    title="Gemini Text Generator API",
+    version="1.0",
+    description="FastAPI server with Gemini LLM"
+)
 
-* By default, the Streamlit application is configured to use the Groq API for essays and  Ollama LLM for poems.
-* To leverage OpenAI, you'll need to uncomment the corresponding code sections in `app.py` and provide the necessary API keys in the `.env` file.
-* Remember to replace placeholders with your actual API keys and adjust port numbers if needed.
-* For detailed information about configuration options and advanced usage, refer to the documentation for FastAPI, Langchain, and Streamlit.
+setup_routes(app)
 
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="localhost", port=8000)
+```
+
+## 4. Streamlit Web Interface
+
+**streamlit_app/app.py:**
+```python
+import streamlit as st
+import requests
+
+st.title("AI Text Generator with Gemini (via FastAPI API)")
+
+topic = st.text_input("Enter a topic:")
+
+endpoint = st.selectbox(
+    "Choose generation type",
+    options=[
+        ("Gemini Essay", "essay-direct"),
+        ("Gemini Poem", "poem-direct"),
+    ],
+    format_func=lambda x: x[0]
+)
+
+if st.button("Generate") and topic.strip():
+    base_url = "http://localhost:8000"
+    url = f"{base_url}/{endpoint[1]}"
+    params = {"topic": topic}
+
+    with st.spinner(f"Calling endpoint `{endpoint[0]}`..."):
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            result = data.get("result", "No result found.")
+            st.markdown("### Generated Text:")
+            st.write(result)
+        except Exception as e:
+            st.error(f"API call failed: {e}")
+else:
+    st.info("Please enter a topic and click Generate.")
+```
+
+## 5. How to Run the Application
+
+**a. Start the FastAPI Server:**
+
+```bash
+python -m app.main
+```
+
+**b. In a separate terminal, start Streamlit:**
+
+```bash
+python -m streamlit run streamlit_app/app.py
+```
+
+- Visit `http://localhost:8501` in your browser.
+- Generate essays and poems by selecting your desired generation type.
+
+## 🟢 Basic Workflow
+
+1. **Run the FastAPI server** (Gemini-powered endpoints ready).
+2. **Launch Streamlit UI** for user interaction.
+3. **User chooses essay or poem, enters a topic, presses generate.**
+4. **Streamlit calls the backend endpoint and displays the Gemini-generated text.**
+
+## 📝 Additional Notes
+
+- Only Gemini-powered endpoints are used for content generation.
+- You can add further endpoints or models by expanding backend logic.
+- Make sure you have a working, active Gemini API key.
+- Ports or URLs can be adjusted as needed.
+
+**You now have a fully integrated, Gemini-powered API and UI stack, with each component calling your robust content generation endpoints!**
