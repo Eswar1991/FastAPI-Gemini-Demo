@@ -1,4 +1,3 @@
-Certainly! Here’s a fully updated, **Gemini-powered project overview and workflow** for your LLM-Chatbot-with-FastAPI-and-Streamlit, reflecting your new code and architecture. This replaces references to OpenAI, Groq, and Ollama with your direct Gemini client functions, updated endpoints, and a Streamlit interface that calls your FastAPI Gemini endpoints.
 
 # LLM-Chatbot-with-FastAPI-and-Streamlit (Google Gemini Version)
 
